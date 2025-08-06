@@ -5,6 +5,42 @@ from google.oauth2.service_account import Credentials
 
 # 📌 Konfiguracja strony
 st.set_page_config(page_title="Lab Magazyn", layout="centered")
+# 📌 Dane użytkowników (można przenieść do st.secrets)
+AUTHORIZED_USERS = {
+    "admin": "admin",
+    "jan": "admin"
+}
+# 📌 Stan logowania
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+# 📌 Ekran logowania
+if not st.session_state.logged_in:
+    st.title("🔐 Logowanie do Lab Magazyn")
+
+    with st.form("login_form"):
+        username = st.text_input("Login")
+        password = st.text_input("Hasło", type="password")
+        submitted = st.form_submit_button("Zaloguj")
+
+        if submitted:
+            if username in AUTHORIZED_USERS and AUTHORIZED_USERS[username] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("❌ Niepoprawny login lub hasło.")
+    st.stop()
+
+# 📌 Pasek powitalny i wylogowanie
+with st.sidebar:
+    st.markdown(f"👋 Witaj, **{st.session_state.username}**!")
+    if st.button("🚪 Wyloguj"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.rerun()
 
 # 📌 Autoryzacja Google Sheets
 SCOPES = [
