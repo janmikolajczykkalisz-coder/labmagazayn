@@ -6,10 +6,8 @@ from google.oauth2.service_account import Credentials
 # 📌 Konfiguracja strony
 st.set_page_config(page_title="Lab Magazyn", layout="centered")
 # 📌 Dane użytkowników (można przenieść do st.secrets)
-AUTHORIZED_USERS = {
-    "admin": "admin",
-    "jan": "admin"
-}
+AUTHORIZED_USERS = st.secrets["users"]
+
 # 📌 Stan logowania
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
