@@ -132,17 +132,19 @@ with st.form("add_form"):
 
     submitted = st.form_submit_button("✅ Dodaj produkt")
     if submitted:
-        if produkt and Firma and typ and nr_ser and lokalizacja:
+        if produkt:  # tylko nazwa produktu jest wymagana
+            # Upewnij się, że kolumny są typu string i bez spacji
             df[["Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja"]] = df[
                 ["Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja"]
             ].astype(str).apply(lambda x: x.str.strip())
 
+            # Porównanie z uwzględnieniem pustych wartości
             istnieje = (
-                (df["Produkt"] == produkt) &
-                (df["Firma"] == Firma) &
-                (df["Typ"] == typ) &
-                (df["Nr seryjny"] == nr_ser) &
-                (df["Lokalizacja"] == lokalizacja)
+                    (df["Produkt"].fillna("") == produkt) &
+                    (df["Firma"].fillna("") == Firma) &
+                    (df["Typ"].fillna("") == typ) &
+                    (df["Nr seryjny"].fillna("") == nr_ser) &
+                    (df["Lokalizacja"].fillna("") == lokalizacja)
             )
 
             if istnieje.any():
@@ -166,6 +168,8 @@ with st.form("add_form"):
                     save_data(df)
                 st.success("✅ Dodano nowy produkt.")
                 st.rerun()
+        else:
+            st.warning("⚠️ Podaj przynajmniej nazwę produktu.")
 
 st.markdown("""
 <style>
