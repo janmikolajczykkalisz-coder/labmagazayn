@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import streamlit as st
 import gspread
@@ -10,12 +9,14 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = Credentials.from_service_account_file(
-    "magazyn-lab2-7e442540fb8b.json",
+# Użycie danych z secrets.toml
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
     scopes=SCOPES
 )
 
 client = gspread.authorize(creds)
+
 
 # 📌 2. Otwórz arkusz Google
 sheet = client.open("Magazyn").worksheet("Sheet1")
