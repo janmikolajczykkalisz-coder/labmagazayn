@@ -127,6 +127,7 @@ end = start + page_size
 filtered_df = filtered_df.iloc[start:end]
 
 for i, row in filtered_df.iterrows():
+
     with st.expander(f" {row['Produkt']} — {row['Firma']}", expanded=False):
         st.markdown(f"** Typ:** {row['Typ']}")
         st.markdown(f"** Nr seryjny:** {row['Nr seryjny']}")
@@ -155,12 +156,38 @@ for i, row in filtered_df.iterrows():
                     save_data(df)
                 st.rerun()
 
+        # Inicjalizacja historii
+        if "historia_usuniec" not in st.session_state:
+            st.session_state["historia_usuniec"] = []
+
         if col3.button("❌", key=f"usun_{i}"):
+            usuniety_produkt = df.loc[global_index].to_dict()
+            st.session_state["historia_usuniec"].append(usuniety_produkt)
+
             with st.spinner("⏳ Usuwam produkt..."):
                 df = df.drop(global_index).reset_index(drop=True)
                 save_data(df)
-            st.success(f"🗑️ Usunięto: {row['Produkt']}")
+
+            st.success(f"🗑️ Usunięto: {usuniety_produkt['Produkt']}")
             st.rerun()
+# 📜 Historia usunięć
+st.subheader(" Historia usunięć")
+
+if "historia_usuniec" in st.session_state and st.session_state["historia_usuniec"]:
+    for idx, item in enumerate(reversed(st.session_state["historia_usuniec"])):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"**{item['Produkt']}** — {item.get('Firma', 'brak firmy')} ({item.get('Typ', 'brak typu')})")
+        with col2:
+            if st.button("↩️ Cofnij", key=f"cofnij_{idx}"):
+                df.loc[len(df)] = item  # Dodaj na koniec
+                df = df.reset_index(drop=True)
+                save_data(df)
+                st.success(f"✅ Przywrócono: {item['Produkt']}")
+                st.session_state["historia_usuniec"].remove(item)
+                st.rerun()
+else:
+    st.info("Brak usuniętych produktów.")
 
 # 📌 Formularz dodawania produktu
 st.subheader("➕ Dodaj nowy produkt")
