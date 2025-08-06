@@ -18,7 +18,7 @@ if "username" not in st.session_state:
 
 # 📌 Ekran logowania
 if not st.session_state.logged_in:
-    st.title("🔐 Logowanie do Lab Magazyn")
+    st.title(" Logowanie ")
 
     with st.form("login_form"):
         username = st.text_input("Login")
@@ -55,6 +55,7 @@ client = gspread.authorize(creds)
 sheet = client.open("Magazyn").worksheet("Sheet1")
 
 # 📌 Wczytywanie danych
+@st.cache_data(ttl=60)
 def load_data():
     values = sheet.get_all_values()
     if not values:
@@ -70,6 +71,7 @@ def load_data():
 def save_data(df):
     sheet.clear()
     sheet.update([df.columns.tolist()] + df.values.tolist())
+    load_data.clear()  # czyści cache po zapisie
 
 # 📌 Interfejs główny
 st.title(" Lab Magazyn")
@@ -109,7 +111,20 @@ if lokalizacja_filter:
     filtered_df = filtered_df[filtered_df["Lokalizacja"] == lokalizacja_filter]
 
 # 📌 Wyświetlanie produktów
-st.markdown('<h2 class="fade-in"> Stan magazynu (przefiltrowane):</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="fade-in"> Stan magazynu :</h2>', unsafe_allow_html=True)
+
+# 📌 Paginacja (jeśli produktów jest dużo)
+page_size = 20
+total_pages = max((len(filtered_df) - 1) // page_size + 1, 1)
+
+if total_pages > 1:
+    page = st.sidebar.slider("Strona", 1, total_pages, 1)
+else:
+    page = 1
+
+start = (page - 1) * page_size
+end = start + page_size
+filtered_df = filtered_df.iloc[start:end]
 
 for i, row in filtered_df.iterrows():
     with st.expander(f" {row['Produkt']} — {row['Firma']}", expanded=False):
@@ -135,25 +150,17 @@ for i, row in filtered_df.iterrows():
 
         if col2.button("➖", key=f"minus_{i}"):
             if df.at[global_index, "Stan"] > 0:
-                with st.spinner("⏳ Zapisuję zmianę..."):
+                with st.spinner(" Zapisuję zmianę..."):
                     df.at[global_index, "Stan"] -= 1
                     save_data(df)
                 st.rerun()
 
-        if f"potwierdz_usuniecie_{i}" not in st.session_state:
-            st.session_state[f"potwierdz_usuniecie_{i}"] = False
-
         if col3.button("❌", key=f"usun_{i}"):
-            st.session_state[f"potwierdz_usuniecie_{i}"] = True
-
-        if st.session_state[f"potwierdz_usuniecie_{i}"]:
-            if st.checkbox(f"✅ Potwierdź usunięcie: {row['Produkt']}", key=f"confirm_{i}"):
-                with st.spinner("⏳ Usuwam produkt..."):
-                    df = df.drop(global_index).reset_index(drop=True)
-                    save_data(df)
-                st.success(f"🗑️ Usunięto: {row['Produkt']}")
-                st.session_state[f"potwierdz_usuniecie_{i}"] = False
-                st.rerun()
+            with st.spinner("⏳ Usuwam produkt..."):
+                df = df.drop(global_index).reset_index(drop=True)
+                save_data(df)
+            st.success(f"🗑️ Usunięto: {row['Produkt']}")
+            st.rerun()
 
 # 📌 Formularz dodawania produktu
 st.subheader("➕ Dodaj nowy produkt")
@@ -199,7 +206,7 @@ with st.form("add_form"):
                     "Lokalizacja": lokalizacja,
                     "Stan": int(stan)
                 }])
-                with st.spinner("⏳ Dodaję nowy produkt..."):
+                with st.spinner(" Dodaję nowy produkt..."):
                     df = pd.concat([df, new_row], ignore_index=True)
                     save_data(df)
                 st.success("✅ Dodano nowy produkt.")
