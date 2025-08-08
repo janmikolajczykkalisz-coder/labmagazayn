@@ -245,8 +245,35 @@ for col, val in mapping.items():
 # Paginacja (wcześnie, żeby nie renderować nadmiaru UI)
 page_size = 20
 total_pages = max((len(filtered) - 1) // page_size + 1, 1)
-page = st.sidebar.slider("📄 Strona", 1, total_pages, 1) if total_pages > 1 else 1
-view = filtered.iloc[(page - 1) * page_size: page * page_size]
+if "page" not in st.session_state:
+    st.session_state.page = 1
+
+max_page = total_pages
+
+# trzy kolumny w sidebarze: przyciski i wyświetlenie numeru strony
+col1, col2, col3 = st.sidebar.columns([1, 2, 1])
+with col1:
+    if st.button("⬅", key="prev"):
+        if st.session_state.page > 1:
+            st.session_state.page -= 1
+            st.rerun()
+
+with col3:
+    if st.button("➡", key="next"):
+        if st.session_state.page < max_page:
+            st.session_state.page += 1
+            st.rerun()
+
+col2.markdown(
+    f"<div style='text-align:center;'>📄 Strona {st.session_state.page} z {max_page}</div>",
+    unsafe_allow_html=True
+)
+
+page = st.session_state.page
+# ————————————————————————————————————————————————————————————————
+
+# Teraz już tylko wycinasz odpowiedni fragment danych:
+view = filtered.iloc[(page - 1) * page_size : page * page_size]
 
 # ------------------------------- Interfejs główny -------------------------------
 st.markdown('<h2 class="fade-in">📦 Stan magazynu</h2>', unsafe_allow_html=True)
