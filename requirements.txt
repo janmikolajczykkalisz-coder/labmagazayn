@@ -2,4 +2,8 @@ gspread
 google-auth
 pandas
 streamlit
-oauth2client   
+oauth2client
+requests
+openpyxl
+python-dotenv
+styles
