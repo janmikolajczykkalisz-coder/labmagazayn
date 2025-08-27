@@ -19,7 +19,7 @@ st.session_state.setdefault("to_delete", set())
 st.session_state.setdefault("require_full_save", False)
 st.session_state.setdefault("historia_usuniec", [])
 st.session_state.setdefault("page", 1)
-st.session_state.setdefault("chat_messages", [])  # historia czatu: [{"role": "...", "content": "..."}]
+
 
 # Dane
 df = st.session_state.df_cache if st.session_state.df_cache is not None else load_data().copy()
@@ -45,6 +45,9 @@ page_size = 20
 total_pages = max((len(filtered) - 1) // page_size + 1, 1)
 page = st.session_state.page
 view = filtered.iloc[(page - 1) * page_size: page * page_size]
+# Kontrolki paginacji
+col1, col2, col3 = st.columns([1, 2, 1])
+
 with col1:
     if st.button("⬅ Poprzednia") and page > 1:
         st.session_state.page -= 1
@@ -55,6 +58,7 @@ with col2:
 with col3:
     if st.button("Następna➡") and page < total_pages:
         st.session_state.page += 1
+
 # Lista produktów
 product_list(view, queue_delta)
 
@@ -63,7 +67,6 @@ deleted_items_history(undo_delete_by_id)
 
 # Formularz dodawania
 add_product_form(df, queue_delta)
-
 
 
 
