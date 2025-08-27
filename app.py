@@ -45,7 +45,16 @@ page_size = 20
 total_pages = max((len(filtered) - 1) // page_size + 1, 1)
 page = st.session_state.page
 view = filtered.iloc[(page - 1) * page_size: page * page_size]
+with col1:
+    if st.button("⬅ Poprzednia") and page > 1:
+        st.session_state.page -= 1
 
+with col2:
+    st.markdown(f"<div style='text-align:center;'>Strona {page} z {total_pages}</div>", unsafe_allow_html=True)
+
+with col3:
+    if st.button("Następna➡") and page < total_pages:
+        st.session_state.page += 1
 # Lista produktów
 product_list(view, queue_delta)
 
@@ -54,6 +63,7 @@ deleted_items_history(undo_delete_by_id)
 
 # Formularz dodawania
 add_product_form(df, queue_delta)
+
 
 
 
