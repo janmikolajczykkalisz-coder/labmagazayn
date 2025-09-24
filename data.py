@@ -1,49 +1,68 @@
-import uuid
+import gspread
 import pandas as pd
-import streamlit as st
-from gspread.utils import rowcol_to_a1
-from config import ws
+from oauth2client.service_account import ServiceAccountCredentials
 
-@st.cache_data(ttl=60)
+
+# --- KONFIGURACJA GOOGLE SHEETS ---
+scope = ["https://spreadsheets.google.com/feeds",
+         "https://www.googleapis.com/auth/drive"]
+
+credentials = ServiceAccountCredentials.from_json_keyfile_name(
+    "credentials.json", scope)
+client = gspread.authorize(credentials)
+
+spreadsheet = client.open("Magazyn")
+worksheet = spreadsheet.sheet1
+
+
+# --- FUNKCJE DO OBSŁUGI DANYCH ---
+
 def load_data():
-    values = ws.get("A1:Z")
-    if not values:
-        return pd.DataFrame(columns=["ID", "Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja", "Stan"])
+    """Wczytuje dane z Google Sheets jako DataFrame"""
+    data = worksheet.get_all_records()
+    df = pd.DataFrame(data)
 
-    headers = [h.strip() for h in values[0]]
-    rows = values[1:]
-    df = pd.DataFrame(rows, columns=headers)
+    if df.empty:
+        df = pd.DataFrame(columns=["ID", "Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja", "Stan"])
 
-    if "ID" not in df.columns:
-        df.insert(0, "ID", [str(uuid.uuid4()) for _ in range(len(df))])
-        ws.clear()
-        ws.update([df.columns.tolist()] + df.fillna("").values.tolist())
-
-    for col in ["Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja"]:
-        if col in df.columns:
-            df[col] = df[col].fillna("").astype(str).str.strip()
-        else:
-            df[col] = ""
+    # Konwersja typów
     if "Stan" in df.columns:
         df["Stan"] = pd.to_numeric(df["Stan"], errors="coerce").fillna(0).astype(int)
     else:
         df["Stan"] = 0
 
+    # Normalizacja tekstowych kolumn
+    for col in ["Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja"]:
+        if col in df.columns:
+            df[col] = df[col].fillna("").astype(str).str.strip()
+        else:
+            df[col] = ""
+
+    # Ustawienie kolejności kolumn
     desired_cols = ["ID", "Produkt", "Firma", "Typ", "Nr seryjny", "Lokalizacja", "Stan"]
     return df.reindex(columns=desired_cols)
 
-def save_full(df):
-    ws.clear()
-    ws.update([df.columns.tolist()] + df.fillna("").values.tolist())
 
-def save_deltas(df, deltas):
-    updates = []
-    stan_idx = df.columns.get_loc("Stan") + 1
-    for item_id, _ in deltas.items():
-        idx = df.index[df["ID"] == item_id]
-        if not idx.empty:
-            row_number = idx[0] + 2
-            a1 = rowcol_to_a1(row_number, stan_idx)
-            updates.append({"range": a1, "values": [[int(df.at[idx[0], "Stan"])]]})
-    if updates:
-        ws.batch_update(updates, value_input_option="RAW")
+def save_data(df):
+    """Zapisuje cały DataFrame do Google Sheets"""
+    worksheet.clear()
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+
+
+def append_row(row_dict):
+    """Dodaje nowy wiersz do arkusza"""
+    worksheet.append_row(list(row_dict.values()))
+
+
+def delete_row_by_id(item_id):
+    """Usuwa wiersz na podstawie ID"""
+    df = load_data()
+    df = df[df["ID"] != item_id]
+    save_data(df)
+
+
+def update_cell_by_id(item_id, column, value):
+    """Aktualizuje jedną komórkę (kolumnę) na podstawie ID"""
+    df = load_data()
+    df.loc[df["ID"] == item_id, column] = value
+    save_data(df)
